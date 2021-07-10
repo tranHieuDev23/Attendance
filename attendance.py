@@ -10,12 +10,22 @@ def handle_attendance(
         csv_files: List[UploadFile],
         min_attendance_second: float,
         output_path: str):
+    excel_engine = 'xlrd' if class_list_file.filename.endswith(
+        '.xls') else 'openpyxl'
     class_list_file_bytes = class_list_file.file.read()
-    class_list_file_encoding = detect(class_list_file_bytes)
-    class_list = pd.read_csv(
-        BytesIO(class_list_file_bytes),
-        encoding=class_list_file_encoding['encoding'])
-    class_list = class_list[['Student ID', 'Name', 'Board', '31/3/2021']]
+    class_list = pd.read_excel(
+        BytesIO(class_list_file_bytes), engine=excel_engine)
+    # If CTSV format
+    if 'MSSV' in class_list.columns and 'Tên sinh viên' in class_list.columns:
+        class_list = class_list[['MSSV', 'Tên sinh viên']]
+    # If qldt format
+    else:
+        class_list = pd.read_excel(
+            BytesIO(class_list_file_bytes), header=1, engine=excel_engine)
+        if 'StudentId' in class_list.columns and 'StudentName' in class_list.columns:
+            class_list = class_list[['StudentId', 'StudentName']]
+            class_list.rename(
+                columns={'StudentId': 'MSSV', 'StudentName': 'Tên sinh viên'}, inplace=True)
 
     def to_seconds(t):
         sec = 0
@@ -43,10 +53,15 @@ def handle_attendance(
         id_list = []
         times = []
         for _, row in dataframe.iterrows():
-            temp = row[0]
-            stud_id = '20' + temp[-6:]
-            id_list.append(stud_id)
-            times.append(to_seconds(row[3]))
+            try:
+                temp = row[0]
+                if not temp[-6:].isnumeric():
+                    continue
+                stud_id = '20' + temp[-6:]
+                id_list.append(stud_id)
+                times.append(to_seconds(row[3]))
+            except:
+                continue
 
         summary = pd.DataFrame({'mssv': id_list, 'time': times}).groupby(
             'mssv').sum().reset_index()

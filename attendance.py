@@ -14,10 +14,7 @@ def handle_attendance(
     class_list_file_encoding = detect(class_list_file_bytes)
     class_list = pd.read_csv(
         BytesIO(class_list_file_bytes),
-        encoding=class_list_file_encoding['encoding'],
-        header=0,
-        sep=None,
-        engine="python")
+        encoding=class_list_file_encoding['encoding'])
     class_list = class_list[['Student ID', 'Name', 'Board', '31/3/2021']]
 
     def to_seconds(t):
@@ -36,11 +33,10 @@ def handle_attendance(
     for csv_file in csv_files:
         csv_file_byte = csv_file.file.read()
         csv_file_encoding = detect(csv_file_byte)
-        print(csv_file_encoding)
         dataframe = pd.read_csv(
             BytesIO(csv_file_byte),
             encoding=csv_file_encoding['encoding'],
-            header=6,
+            skiprows=range(0, 6),
             sep=None,
             engine="python")
         dataframe = dataframe[dataframe['Role'] != 'Organizer']

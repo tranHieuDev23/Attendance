@@ -1,6 +1,8 @@
 from typing import List
+from io import BytesIO
 from fastapi import UploadFile
 import pandas as pd
+from chardet import detect
 
 
 def handle_attendance(
@@ -8,8 +10,13 @@ def handle_attendance(
         csv_files: List[UploadFile],
         min_attendance_second: float,
         output_path: str):
-
-    class_list = pd.read_csv(class_list_file.file, header=0)
+    class_list_file_bytes = class_list_file.file.read()
+    class_list_file_encoding = detect(class_list_file_bytes)
+    print(class_list_file_encoding)
+    class_list = pd.read_csv(
+        BytesIO(class_list_file_bytes),
+        encoding=class_list_file_encoding['encoding'],
+        header=0)
     class_list = class_list[['Student ID', 'Name', 'Board', '31/3/2021']]
 
     def to_seconds(t):
@@ -26,7 +33,13 @@ def handle_attendance(
         return sec
 
     for csv_file in csv_files:
-        dataframe = pd.read_csv(csv_file.file, header=6)
+        csv_file_byte = csv_file.file.read()
+        csv_file_encoding = detect(csv_file_byte)
+        print(csv_file_encoding)
+        dataframe = pd.read_csv(
+            BytesIO(csv_file_byte),
+            encoding=csv_file_encoding['encoding'],
+            header=6)
         dataframe = dataframe[dataframe['Role'] != 'Organizer']
         id_list = []
         times = []

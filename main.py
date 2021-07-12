@@ -40,7 +40,7 @@ def create_app():
 
             with open(excel_filepath, "rb") as excel_file:
                 headers = {
-                    "Content-Disposition": 'attachment; filename="Attendance score_fixed.xlsx"'
+                    "Content-Disposition": 'attachment; filename="Attendance report.xlsx"'
                 }
                 return Response(
                     content=excel_file.read(),

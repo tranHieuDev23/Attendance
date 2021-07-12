@@ -71,9 +71,10 @@ def handle_attendance(
         for _, row in dataframe.iterrows():
             try:
                 temp = row[0]
-                if not temp[-6:].isnumeric():
-                    continue
-                stud_id = '20' + temp[-6:]
+                if temp.endswith('M'):
+                    stud_id = '20' + temp[-7:]
+                else:
+                    stud_id = '20' + temp[-6:]
                 id_list.append(stud_id)
                 times.append(to_seconds(row[3]))
             except:
@@ -93,15 +94,16 @@ def handle_attendance(
                     break
             time_list.append(found)
 
-        class_lst_time_details[meeting_info] = time_list
+        class_lst_time_details[csv_file.filename] = time_list
 
         if min_attendance_second is None:
             avg_time = summary[summary['time'] > 0]['time'].mean()
             min_attendance_second = avg_time / 3
 
         time_list = ['+' if t > min_attendance_second else '-' for t in time_list]
-        class_list[meeting_info] = time_list
-        class_list['Số buổi vắng'] = class_list.apply(lambda row: sum(row[2:] == '-'), axis = 1)
+        class_list[csv_file.filename] = time_list
+    
+    class_list['Số buổi vắng'] = class_list.apply(lambda row: sum(row[2:] == '-'), axis = 1)
 
     with pd.ExcelWriter(output_path) as writer:
         class_list.to_excel(writer, sheet_name = 'Attendance report')

@@ -27,6 +27,8 @@ def handle_attendance(
             class_list.rename(
                 columns={'StudentId': 'MSSV', 'StudentName': 'Tên sinh viên'}, inplace=True)
 
+    class_lst_time_details = class_list.copy()
+
     def to_seconds(t):
         sec = 0
         h = t.find('h')
@@ -43,6 +45,20 @@ def handle_attendance(
     for csv_file in csv_files:
         csv_file_byte = csv_file.file.read()
         csv_file_encoding = detect(csv_file_byte)
+        # read meeting info
+        info_df = pd.read_csv(
+            BytesIO(csv_file_byte),
+            encoding=csv_file_encoding['encoding'],
+            skiprows=range(0, 1),
+            nrows = 2,
+            sep=None,
+            engine="python")
+        meeting_info = ''
+        for _, row in info_df.iterrows():
+            tmp = row[1]
+            meeting_info += (tmp if tmp.find(',') < 0 else tmp[:tmp.find(',')]) + ' '
+
+        # read attendance data
         dataframe = pd.read_csv(
             BytesIO(csv_file_byte),
             encoding=csv_file_encoding['encoding'],
@@ -77,13 +93,16 @@ def handle_attendance(
                     break
             time_list.append(found)
 
+        class_lst_time_details[meeting_info] = time_list
+
         if min_attendance_second is None:
             avg_time = summary[summary['time'] > 0]['time'].mean()
             min_attendance_second = avg_time / 3
 
-        time_list = ['+' if t >
-                     min_attendance_second else '-' for t in time_list]
-        class_list[csv_file.filename] = time_list
+        time_list = ['+' if t > min_attendance_second else '-' for t in time_list]
+        class_list[meeting_info] = time_list
+        class_list['Số buổi vắng'] = class_list.apply(lambda row: sum(row[2:] == '-'), axis = 1)
 
     with pd.ExcelWriter(output_path) as writer:
-        class_list.to_excel(writer)
+        class_list.to_excel(writer, sheet_name = 'Attendance report')
+        class_lst_time_details.to_excel(writer, sheet_name = 'Attendance Time Details')
